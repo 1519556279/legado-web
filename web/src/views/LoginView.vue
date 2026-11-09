@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NForm, NFormItem, NInput, NTabs, NTabPane, NAlert, useMessage } from 'naive-ui'
+import { NButton, NForm, NFormItem, NInput, NAlert, useMessage } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
 import CapCaptcha from '@/components/CapCaptcha.vue'
 import { LOCALES, locale, setLocale, t } from '@/i18n'
@@ -75,10 +75,28 @@ async function submit() {
       <n-alert v-if="firstUser" type="info" :bordered="false" style="margin-bottom: 16px">
         {{ t('系统还没有用户，第一个注册的账号将成为管理员。') }}
       </n-alert>
-      <n-tabs v-model:value="tab" type="segment" animated>
-        <n-tab-pane name="login" :tab="t('登录')" :disabled="!!firstUser" />
-        <n-tab-pane v-if="canRegister" name="register" :tab="t('注册')" />
-      </n-tabs>
+      <div class="mode-switch" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="mode-item"
+          :class="{ active: tab === 'login' }"
+          :disabled="!!firstUser"
+          @click="tab = 'login'"
+        >
+          {{ t('登录') }}
+        </button>
+        <button
+          v-if="canRegister"
+          type="button"
+          role="tab"
+          class="mode-item"
+          :class="{ active: tab === 'register' }"
+          @click="tab = 'register'"
+        >
+          {{ t('注册') }}
+        </button>
+      </div>
       <n-form style="margin-top: 16px" @submit.prevent="submit">
         <n-form-item :label="t('用户名')" :show-feedback="false" style="margin-bottom: 14px">
           <n-input v-model:value="form.username" :placeholder="t('用户名')" autocomplete="username" @keyup.enter="submit" />
@@ -125,15 +143,101 @@ async function submit() {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background:
-    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--app-accent) 12%, transparent), transparent 40%),
-    var(--app-bg);
+  position: relative;
+  overflow: hidden;
+  background: var(--app-bg);
+}
+
+.login-page::before,
+.login-page::after {
+  content: '';
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  opacity: 0.55;
+  pointer-events: none;
+  animation: float-glow 12s ease-in-out infinite alternate;
+}
+
+.login-page::before {
+  top: -160px;
+  left: -120px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 20%, transparent), transparent 65%);
+}
+
+.login-page::after {
+  bottom: -180px;
+  right: -140px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 14%, transparent), transparent 65%);
+  animation-delay: -6s;
+}
+
+@keyframes float-glow {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(24px, 18px, 0) scale(1.08);
+  }
 }
 
 .login-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 380px;
   padding: 28px 24px;
+  animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 登录 / 注册切换 */
+.mode-switch {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: var(--app-accent-soft);
+}
+
+.mode-item {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--app-text-2);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mode-item.active {
+  color: var(--app-accent);
+  background: var(--app-surface);
+  box-shadow: 0 1px 4px rgba(24, 48, 44, 0.12);
+}
+
+.mode-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .logo {
@@ -177,6 +281,11 @@ async function submit() {
   color: var(--app-text-2);
   cursor: pointer;
   border-radius: 4px;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.langs button:hover {
+  background: var(--app-accent-soft);
 }
 
 .langs button.on {

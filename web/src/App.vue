@@ -28,12 +28,12 @@ const naiveLocale = locale === 'en' ? enUS : locale === 'zh-TW' ? zhTW : zhCN
 const naiveDateLocale = locale === 'en' ? dateEnUS : locale === 'zh-TW' ? dateZhTW : dateZhCN
 
 const overrides = computed<GlobalThemeOverrides>(() => {
-  const primary = ui.isDark ? '#d4a15c' : '#9c6b30'
+  const primary = ui.isDark ? '#5fb8a5' : '#2f7d6d'
   return {
     common: {
       primaryColor: primary,
-      primaryColorHover: ui.isDark ? '#e0b374' : '#b07c3c',
-      primaryColorPressed: ui.isDark ? '#b98945' : '#83581f',
+      primaryColorHover: ui.isDark ? '#74cbb8' : '#3a9783',
+      primaryColorPressed: ui.isDark ? '#4ba08e' : '#25695b',
       primaryColorSuppl: primary,
       borderRadius: '8px',
       fontFamily:
@@ -54,7 +54,11 @@ const overrides = computed<GlobalThemeOverrides>(() => {
       <n-dialog-provider>
         <n-notification-provider>
           <n-message-provider>
-            <router-view />
+            <router-view v-slot="{ Component }">
+              <transition name="fade-slide" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </router-view>
             <app-shell-helper />
             <source-browser-bridge v-if="auth.loggedIn" />
           </n-message-provider>
@@ -63,3 +67,20 @@ const overrides = computed<GlobalThemeOverrides>(() => {
     </n-loading-bar-provider>
   </n-config-provider>
 </template>
+
+<style>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>
