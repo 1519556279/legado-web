@@ -114,51 +114,51 @@ fun Route.presenceRoutes(presenceService: PresenceService) {
             }
             call.respond(OkResponse())
         }
-    }
 
-    route("/api/admin") {
-        get("/presence") {
-            call.requireAdmin()
-            val users = presenceService.online()
-            call.respond(
-                PresenceSummary(
-                    online = users.size,
-                    reading = users.count { it.state == "reading" },
-                    listening = users.count { it.state == "listening" },
-                    idle = users.count { it.state == "idle" },
-                    users = users.map {
-                        PresenceUser(it.userId, it.username, it.state, it.bookName, it.chapter, it.lastSeen)
-                    },
-                )
-            )
-        }
-
-        get("/activity") {
-            call.requireAdmin()
-            val days = call.request.queryParameters["days"]?.toIntOrNull()?.coerceIn(1, 90) ?: 7
-            val today = LocalDate.now()
-            val from = today.minusDays((days - 1).toLong()).toString()
-
-            val totalUsers = dbQuery { Users.selectAll().toList().size }
-            val registeredByDay = dbQuery { Users.selectAll().toList() }
-                .groupBy { epochDay(it[Users.createdAt]) }
-                .mapValues { it.value.size }
-            val activityByDay = dbQuery { ActivityDaily.selectAll().toList() }
-                .filter { it[ActivityDaily.day] >= from }
-                .groupBy { it[ActivityDaily.day] }
-
-            val list = (0 until days).map { offset ->
-                val day = today.minusDays((days - 1 - offset).toLong()).toString()
-                val rows = activityByDay[day].orEmpty()
-                DayActivity(
-                    day = day,
-                    registered = registeredByDay[day] ?: 0,
-                    activeUsers = rows.map { it[ActivityDaily.userId] }.distinct().size,
-                    readingSeconds = rows.sumOf { it[ActivityDaily.readingSeconds] },
-                    listeningSeconds = rows.sumOf { it[ActivityDaily.listeningSeconds] },
+        route("/api/admin") {
+            get("/presence") {
+                call.requireAdmin()
+                val users = presenceService.online()
+                call.respond(
+                    PresenceSummary(
+                        online = users.size,
+                        reading = users.count { it.state == "reading" },
+                        listening = users.count { it.state == "listening" },
+                        idle = users.count { it.state == "idle" },
+                        users = users.map {
+                            PresenceUser(it.userId, it.username, it.state, it.bookName, it.chapter, it.lastSeen)
+                        },
+                    )
                 )
             }
-            call.respond(ActivitySummary(totalUsers, list))
+
+            get("/activity") {
+                call.requireAdmin()
+                val days = call.request.queryParameters["days"]?.toIntOrNull()?.coerceIn(1, 90) ?: 7
+                val today = LocalDate.now()
+                val from = today.minusDays((days - 1).toLong()).toString()
+
+                val totalUsers = dbQuery { Users.selectAll().toList().size }
+                val registeredByDay = dbQuery { Users.selectAll().toList() }
+                    .groupBy { epochDay(it[Users.createdAt]) }
+                    .mapValues { it.value.size }
+                val activityByDay = dbQuery { ActivityDaily.selectAll().toList() }
+                    .filter { it[ActivityDaily.day] >= from }
+                    .groupBy { it[ActivityDaily.day] }
+
+                val list = (0 until days).map { offset ->
+                    val day = today.minusDays((days - 1 - offset).toLong()).toString()
+                    val rows = activityByDay[day].orEmpty()
+                    DayActivity(
+                        day = day,
+                        registered = registeredByDay[day] ?: 0,
+                        activeUsers = rows.map { it[ActivityDaily.userId] }.distinct().size,
+                        readingSeconds = rows.sumOf { it[ActivityDaily.readingSeconds] },
+                        listeningSeconds = rows.sumOf { it[ActivityDaily.listeningSeconds] },
+                    )
+                }
+                call.respond(ActivitySummary(totalUsers, list))
+            }
         }
     }
 }
