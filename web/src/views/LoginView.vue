@@ -155,9 +155,10 @@ async function submit() {
   width: 420px;
   height: 420px;
   border-radius: 50%;
-  opacity: 0.55;
+  opacity: 0.45;
   pointer-events: none;
-  animation: float-glow 12s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+  animation: float-glow 14s ease-in-out infinite alternate;
 }
 
 .login-page::before {
@@ -170,15 +171,18 @@ async function submit() {
   bottom: -180px;
   right: -140px;
   background: radial-gradient(circle, color-mix(in srgb, var(--app-accent) 14%, transparent), transparent 65%);
-  animation-delay: -6s;
+  animation-delay: -7s;
 }
 
+/* 只用位移和透明度，避免大元素缩放触发重绘导致卡顿 */
 @keyframes float-glow {
   from {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
+    opacity: 0.35;
   }
   to {
-    transform: translate3d(24px, 18px, 0) scale(1.08);
+    transform: translate3d(18px, 12px, 0);
+    opacity: 0.55;
   }
 }
 
@@ -188,17 +192,18 @@ async function submit() {
   width: 100%;
   max-width: 380px;
   padding: 28px 24px;
-  animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+  animation: card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes card-in {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.98);
+    transform: translate3d(0, 14px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 }
 
