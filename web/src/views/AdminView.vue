@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   NAlert, NButton, NDataTable, NIcon, NInput, NInputNumber, NModal, NRadioButton, NRadioGroup,
   NSpace, NSwitch, NTabs, NTabPane, useDialog, useMessage, type DataTableColumns,
@@ -9,7 +9,8 @@ import InviteManager from '@/components/InviteManager.vue'
 import HelpTip from '@/components/HelpTip.vue'
 import { useIsMobile } from '@/composables/useIsMobile'
 import { mobileColumns } from '@/utils/mobileTable'
-import { adminApi } from '@/api'
+import { adminApi, presenceApi } from '@/api'
+import type { ActivitySummary, PresenceSummary, PresenceUser } from '@/api'
 import { useUpdateStore, versionName } from '@/stores/update'
 import { copyText } from '@/utils/clipboard'
 import type { User } from '@/api/types'
@@ -24,6 +25,78 @@ const auth = useAuthStore()
 const tab = ref('users')
 const users = ref<User[]>([])
 const loading = ref(false)
+
+// ---------- 在线状态与活跃统计 ----------
+const presence = ref<PresenceSummary | null>(null)
+const activity = ref<ActivitySummary | null>(null)
+const presenceLoading = ref(false)
+let presenceTimer: ReturnType<typeof setInterval> | null = null
+
+const STATE_LABEL: Record<string, string> = {
+  reading: '阅读中',
+  listening: '听书中',
+  idle: '在线',
+}
+
+async function loadPresence() {
+  presenceLoading.value = true
+  try {
+    presence.value = await presenceApi.overview()
+  } catch (e: any) {
+    message.error(e.message)
+  } finally {
+    presenceLoading.value = false
+  }
+}
+
+async function loadActivity() {
+  try {
+    activity.value = await presenceApi.activity(7)
+  } catch {
+    // 统计接口失败不影响在线列表
+  }
+}
+
+function startPresence() {
+  loadPresence()
+  loadActivity()
+  presenceTimer = setInterval(() => {
+    if (tab.value === 'presence') loadPresence()
+  }, 10000)
+}
+
+function timeAgo(ts: number) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000))
+  if (s < 60) return `${s} 秒前`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m} 分钟前`
+  return `${Math.floor(m / 60)} 小时前`
+}
+
+const maxSeconds = computed(() =>
+  Math.max(1, ...(activity.value?.days ?? []).map((d) => Math.max(d.readingSeconds, d.listeningSeconds))),
+)
+
+function barHeight(v: number) {
+  return Math.max(2, Math.round((v / maxSeconds.value) * 90)) + 'px'
+}
+
+const presenceColumns = computed<DataTableColumns<PresenceUser>>(() => [
+  { title: t('用户'), key: 'username', width: 140, ellipsis: { tooltip: true } },
+  {
+    title: t('状态'),
+    key: 'state',
+    width: 90,
+    render: (row) => t(STATE_LABEL[row.state] ?? row.state),
+  },
+  { title: t('书名'), key: 'bookName', ellipsis: { tooltip: true } },
+  { title: t('章节'), key: 'chapter', ellipsis: { tooltip: true } },
+  { title: t('最后活动'), key: 'lastSeen', width: 90, render: (row) => timeAgo(row.lastSeen) },
+])
+
+onBeforeUnmount(() => {
+  if (presenceTimer) clearInterval(presenceTimer)
+})
 const settings = ref<Record<string, string>>({})
 
 async function loadUsers() {
@@ -63,6 +136,7 @@ onMounted(() => {
   loadUsers()
   loadSettings()
   updates.load().catch(() => {})
+  startPresence()
 })
 
 // ---------------- 检查更新：比较本镜像与仓库里 latest 镜像的构建时间 ----------------
@@ -262,6 +336,70 @@ async function saveSettings() {
 
       <n-tab-pane name="invites" :tab="t('邀请码')">
         <invite-manager admin />
+      </n-tab-pane>
+
+      <n-tab-pane name="presence" :tab="t('在线 ({0})', [presence?.online ?? 0])">
+        <div class="presence-stats">
+          <div class="presence-stat">
+            <strong>{{ presence?.online ?? 0 }}</strong>
+            <span>{{ t('在线') }}</span>
+          </div>
+          <div class="presence-stat">
+            <strong>{{ presence?.reading ?? 0 }}</strong>
+            <span>{{ t('阅读中') }}</span>
+          </div>
+          <div class="presence-stat">
+            <strong>{{ presence?.listening ?? 0 }}</strong>
+            <span>{{ t('听书中') }}</span>
+          </div>
+          <div class="presence-stat">
+            <strong>{{ presence?.idle ?? 0 }}</strong>
+            <span>{{ t('空闲') }}</span>
+          </div>
+          <div class="presence-stat">
+            <strong>{{ activity?.totalUsers ?? users.length }}</strong>
+            <span>{{ t('总注册') }}</span>
+          </div>
+        </div>
+
+        <div class="bar">
+          <div style="flex: 1" />
+          <n-button size="small" :loading="presenceLoading" @click="loadPresence">{{ t('刷新') }}</n-button>
+        </div>
+        <n-data-table
+          :columns="presenceColumns"
+          :data="presence?.users ?? []"
+          :loading="presenceLoading"
+          size="small"
+          :class="{ 'm-table': isMobile }"
+          :scroll-x="isMobile ? undefined : 620"
+          :table-layout="isMobile ? 'fixed' : 'auto'"
+        />
+
+        <h3 class="set-group-title">{{ t('最近 7 天活跃') }}</h3>
+        <div class="trend">
+          <div v-for="d in activity?.days ?? []" :key="d.day" class="trend-col">
+            <div class="trend-bars">
+              <div
+                class="trend-bar reading"
+                :style="{ height: barHeight(d.readingSeconds) }"
+                :title="t('阅读 {0} 分钟', [Math.round(d.readingSeconds / 60)])"
+              />
+              <div
+                class="trend-bar listening"
+                :style="{ height: barHeight(d.listeningSeconds) }"
+                :title="t('听书 {0} 分钟', [Math.round(d.listeningSeconds / 60)])"
+              />
+            </div>
+            <div class="trend-day">{{ d.day.slice(5) }}</div>
+            <div class="trend-num">{{ d.activeUsers }}</div>
+          </div>
+        </div>
+        <div class="trend-legend">
+          <span><i class="dot reading" />{{ t('阅读时长') }}</span>
+          <span><i class="dot listening" />{{ t('听书时长') }}</span>
+          <span>{{ t('下方数字为当日活跃人数') }}</span>
+        </div>
       </n-tab-pane>
 
       <n-tab-pane name="settings" :tab="t('系统设置')">
@@ -728,5 +866,108 @@ async function saveSettings() {
   .save-bar {
     bottom: calc(64px + env(safe-area-inset-bottom));
   }
+}
+
+.presence-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.presence-stat {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.presence-stat strong {
+  font-size: 22px;
+  color: var(--app-accent);
+}
+
+.presence-stat span {
+  font-size: 12px;
+  color: var(--app-text-2);
+}
+
+.trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 150px;
+  padding: 12px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+}
+
+.trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 90px;
+}
+
+.trend-bar {
+  width: 10px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+}
+
+.trend-bar.reading {
+  background: var(--app-accent);
+}
+
+.trend-bar.listening {
+  background: #e0a458;
+}
+
+.trend-day,
+.trend-num {
+  font-size: 11px;
+  color: var(--app-text-2);
+}
+
+.trend-num {
+  color: var(--app-text);
+}
+
+.trend-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--app-text-2);
+  flex-wrap: wrap;
+}
+
+.trend-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+.trend-legend .dot.reading {
+  background: var(--app-accent);
+}
+
+.trend-legend .dot.listening {
+  background: #e0a458;
 }
 </style>

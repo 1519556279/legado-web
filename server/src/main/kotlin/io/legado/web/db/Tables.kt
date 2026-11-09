@@ -205,6 +205,7 @@ val allTables = arrayOf(
     Users, InviteCodes, InviteUsages, Settings, BookSources, UserSourcePrefs,
     SourceSubscriptions, EngineCaches, Cookies, BookGroups, Books, Chapters,
     ChapterContents, ReplaceRules, UserPrefs, ApiKeys, TtsEngines, Bookmarks, ReadingStats,
+    ActivityDaily,
     DictRules, TxtTocRules, UserFonts,
 )
 
@@ -278,6 +279,15 @@ object ReadingStats : Table("reading_stats") {
     val seconds = long("seconds").default(0)
     val chars = long("chars").default(0)
     override val primaryKey = PrimaryKey(userId, day, bookId)
+}
+
+/** 每日活跃时长：用户每天累计的阅读、听书时长（秒），由心跳增量上报 */
+object ActivityDaily : Table("activity_daily") {
+    val userId = long("user_id")
+    val day = varchar("day", 10)
+    val readingSeconds = long("reading_seconds").default(0)
+    val listeningSeconds = long("listening_seconds").default(0)
+    override val primaryKey = PrimaryKey(userId, day)
 }
 
 object TtsEngines : LongIdTable("tts_engines") {

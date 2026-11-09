@@ -4,7 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute, useRouter } from 'vue-router'
 import { NIcon, NModal, NSpin, useMessage } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
-import { searchApi, shelfApi, toOpenRequest } from '@/api'
+import { searchApi, shelfApi, toOpenRequest, presenceApi } from '@/api'
 import QuickReplaceModal from '@/components/QuickReplaceModal.vue'
 import DictModal from '@/components/DictModal.vue'
 import ReadAloudPanel from '@/components/ReadAloudPanel.vue'
@@ -671,6 +671,33 @@ watch(mode, () => {
   if (!loadingInit.value && chapters.value.length) goChapter(curIndex.value, curPos.value)
 })
 
+// ---------------- 在线状态心跳 ----------------
+let presenceTimer: ReturnType<typeof setInterval> | null = null
+let presenceLastAt = Date.now()
+
+/** 每 30 秒上报一次：阅读中 / 听书中、书名、章节、增量秒数 */
+function reportPresence() {
+  const now = Date.now()
+  const seconds = Math.min(120, Math.round((now - presenceLastAt) / 1000))
+  presenceLastAt = now
+  const d = new Date()
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  presenceApi
+    .report({
+      state: tts.active ? 'listening' : 'reading',
+      bookName: book.value?.name ?? '',
+      chapter: chapters.value[curIndex.value]?.title ?? '',
+      seconds,
+      day,
+    })
+    .catch(() => {})
+}
+
+onMounted(() => {
+  presenceTimer = setInterval(reportPresence, 30000)
+  reportPresence()
+})
+
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('resize', onResize)
@@ -725,6 +752,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   saveProgress()
+  if (presenceTimer) clearInterval(presenceTimer)
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('beforeunload', onBeforeUnload)

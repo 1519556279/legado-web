@@ -41,6 +41,7 @@ import io.legado.web.routes.longCallRoutes
 import io.legado.web.routes.mediaRoutes
 import io.legado.web.routes.bookmarkRoutes
 import io.legado.web.routes.readingStatsRoutes
+import io.legado.web.routes.presenceRoutes
 import io.legado.web.routes.ruleRoutes
 import io.legado.web.routes.authRoutes
 import io.legado.web.routes.shelfRoutes
@@ -124,6 +125,7 @@ fun Application.module() {
     val replaceService = ReplaceRuleService()
     val bookmarkService = BookmarkService()
     val readingStatsService = ReadingStatsService()
+    val presenceService = io.legado.web.service.PresenceService()
     val shelfService = ShelfService(sourceService, replaceService, appSettings)
     val searchService = SearchService(sourceService, settingService)
     val configService = SourceConfigService(sourceService)
@@ -274,6 +276,7 @@ fun Application.module() {
         mediaRoutes(audioService, ttsService, io.legado.web.service.FontService(appSettings.dataDir))
         bookmarkRoutes(bookmarkService)
         readingStatsRoutes(readingStatsService)
+        presenceRoutes(presenceService)
         ruleRoutes(dictRuleService, txtTocRuleService)
         browserRoutes(browserBridge)
         route("/openapi/{...}") {

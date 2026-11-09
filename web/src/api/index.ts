@@ -59,6 +59,46 @@ export const adminApi = {
   checkUpdate: () => http.post<UpdateStatus>('/api/admin/update/check'),
 }
 
+export interface PresenceUser {
+  userId: number
+  username: string
+  state: 'reading' | 'listening' | 'idle'
+  bookName: string
+  chapter: string
+  lastSeen: number
+}
+
+export interface PresenceSummary {
+  online: number
+  reading: number
+  listening: number
+  idle: number
+  users: PresenceUser[]
+}
+
+export interface DayActivity {
+  day: string
+  registered: number
+  activeUsers: number
+  readingSeconds: number
+  listeningSeconds: number
+}
+
+export interface ActivitySummary {
+  totalUsers: number
+  days: DayActivity[]
+}
+
+export const presenceApi = {
+  /** 心跳：state = reading / listening / idle，seconds 为距上次心跳的增量（秒） */
+  report: (data: { state: string; bookName?: string; chapter?: string; seconds?: number; day?: string }) =>
+    http.post('/api/presence', data),
+  /** 管理员：在线人数、状态、书名章节 */
+  overview: () => http.get<PresenceSummary>('/api/admin/presence'),
+  /** 管理员：最近 N 天的注册数、活跃人数、阅读/听书时长 */
+  activity: (days = 7) => http.get<ActivitySummary>(`/api/admin/activity?days=${days}`),
+}
+
 export interface SourceDetail {
   id: number
   isPublic: boolean
