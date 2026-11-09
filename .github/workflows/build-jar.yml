@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,10 +43,20 @@ jobs:
       - name: Show artifacts
         run: ls -lh server/build/libs/
 
-      - name: Upload jar
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: legado-web-jar
           path: server/build/libs/*.jar
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="jar-$(date +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" server/build/libs/*.jar \
+            --title "legado-web jar $TAG" \
+            --notes "Automated build from ${{ github.sha }}"
+          echo "RELEASE_TAG=$TAG"
