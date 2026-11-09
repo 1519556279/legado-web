@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { NButton, NIcon, NSelect, NSlider, NDropdown } from 'naive-ui'
+import { NButton, NIcon, NSelect, NSlider, NDropdown, NSwitch } from 'naive-ui'
 import { PlayCircle, PauseCircle, PlaySkipBack, PlaySkipForward, Close, OptionsOutline, TimerOutline } from '@vicons/ionicons5'
 import type { TtsEngine } from '@/api/types'
 import { t } from '@/i18n'
@@ -18,6 +18,8 @@ const props = defineProps<{
   error: string
   bg: string
   fg: string
+  /** 进入阅读页后自动开始朗读 */
+  autoTts: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +32,7 @@ const emit = defineEmits<{
   'update:voice': [string]
   /** 打开朗读引擎管理（新建、编辑、导入在线引擎） */
   manageEngines: []
+  'update:autoTts': [boolean]
 }>()
 
 const showOptions = ref(false)
@@ -131,6 +134,10 @@ onBeforeUnmount(() => sleepTimer && clearInterval(sleepTimer))
           :tooltip="false"
           @update:value="(v: number) => emit('update:rate', v)"
         />
+      </label>
+      <label>
+        <span>{{ t('下次进书自动朗读') }}</span>
+        <n-switch :value="autoTts" size="small" @update:value="(v: boolean) => emit('update:autoTts', v)" />
       </label>
     </div>
   </div>

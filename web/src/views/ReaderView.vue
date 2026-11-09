@@ -713,6 +713,10 @@ onMounted(async () => {
     loadingInit.value = false
     await nextTick()
     await goChapter(index, pos)
+    if (cfg.value.autoTts) {
+      await nextTick()
+      ttsStart()
+    }
   } catch (e: any) {
     loadingInit.value = false
     message.error(e.message)
@@ -1047,6 +1051,8 @@ function onChanged(nb: Book) {
       :bg="theme.panel"
       :fg="theme.text"
       :title="ttsEngineName"
+      :auto-tts="!!cfg.autoTts"
+      @update:auto-tts="(v: boolean) => (readerStore.config.autoTts = v)"
       @toggle="ttsToggle"
       @stop="ttsStop"
       @prev="ttsSkip(-1)"

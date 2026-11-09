@@ -109,6 +109,8 @@ export interface ReaderConfig {
   ttsRate?: number
   /** 浏览器语音名称（为空时自动选择中文语音） */
   ttsVoice?: string
+  /** 进入阅读页后自动开始朗读 */
+  autoTts?: boolean
   /** 阅读时保持屏幕常亮 */
   keepScreenOn?: boolean
   /** 双页显示（左右翻页）：auto 为横向宽屏时左右两页并排，off 为始终单页 */
