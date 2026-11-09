@@ -25,10 +25,17 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Build web frontend
+        run: |
+          cd web
+          npm ci
+          npm run build
+          ls -lh dist
+
       - name: Build fat jar
         run: |
           chmod +x gradlew
-          ./gradlew :server:buildFatJar -PwithWeb --no-daemon
+          ./gradlew :server:buildFatJar -PwithWeb -x buildWeb --no-daemon
 
       - name: Show artifacts
         run: ls -lh server/build/libs/
