@@ -98,8 +98,6 @@ class SettingService {
             cache[key] = x
             x
         }
-        // 已取消“开放注册”：历史存的 open 一律当作邀请码注册
-        if (key == REGISTRATION_MODE && v == "open") return "invite"
         return v
     }
 
@@ -132,8 +130,8 @@ class SettingService {
             val v = allowed[k] ?: continue
             if ((v.trim().toIntOrNull() ?: 0) < 1) throw io.legado.web.auth.BadRequestException("并发数和超时需要是大于 0 的整数")
         }
-        if (allowed[REGISTRATION_MODE]?.let { it !in setOf("invite", "closed") } == true) {
-            throw io.legado.web.auth.BadRequestException("registrationMode 只能是 invite/closed")
+        if (allowed[REGISTRATION_MODE]?.let { it !in setOf("invite", "open", "closed") } == true) {
+            throw io.legado.web.auth.BadRequestException("registrationMode 只能是 invite/open/closed")
         }
         dbQuery {
             allowed.forEach { (k, v) ->

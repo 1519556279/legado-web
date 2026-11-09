@@ -426,6 +426,7 @@ async function saveSettings() {
                 <div class="set-control">
                   <n-radio-group v-model:value="settings.registrationMode" size="small">
                     <n-radio-button value="invite">{{ t('邀请码注册') }}</n-radio-button>
+                    <n-radio-button value="open">{{ t('开放注册（无需邀请码）') }}</n-radio-button>
                     <n-radio-button value="closed">{{ t('关闭注册') }}</n-radio-button>
                   </n-radio-group>
                 </div>
