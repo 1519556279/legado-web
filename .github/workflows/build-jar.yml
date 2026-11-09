@@ -1,0 +1,42 @@
+name: Build legado-web jar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build fat jar
+        run: |
+          chmod +x gradlew
+          ./gradlew :server:buildFatJar -PwithWeb --no-daemon
+
+      - name: Show artifacts
+        run: ls -lh server/build/libs/
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado-web-jar
+          path: server/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14
