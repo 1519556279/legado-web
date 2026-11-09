@@ -35,17 +35,11 @@ jobs:
           npm run build
           ls -lh dist
 
-      - name: Copy dist into server resources
-        run: |
-          rm -rf server/src/main/resources/static
-          mkdir -p server/src/main/resources/static
-          cp -r web/dist/. server/src/main/resources/static/
-          ls server/src/main/resources/static | head
-
       - name: Build fat jar
         run: |
           chmod +x gradlew
-          ./gradlew :server:buildFatJar -PwithWeb -x buildWeb --no-daemon
+          export PATH="$(dirname "$(which npm)"):$PATH"
+          ./gradlew :server:buildFatJar -PwithWeb --no-daemon
 
       - name: Show artifacts
         run: ls -lh server/build/libs/
