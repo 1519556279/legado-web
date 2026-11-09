@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 /** 一个在线用户的状态 */
 data class PresenceEntry(
     val userId: Long,
-    val username: String,
+    var username: String,
     var state: String = "idle",
     var bookName: String = "",
     var chapter: String = "",
